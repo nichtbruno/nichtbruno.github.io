@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Desktop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+        }
+
+        /* Desktop */
+        .desktop {
+            position: relative;
+            width: 100vw;
+            height: calc(100vh - 50px);
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        }
+
+        /* Desktop Icons */
+        .desktop-icon {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            padding: 8px;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .desktop-icon.selected {
+            background: rgba(255, 255, 255, 0.2);
+            outline: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .icon-image {
+            width: 48px;
+            height: 48px;
+            background: #4a90e2;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .icon-label {
+            font-size: 12px;
+            color: white;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            max-width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Windows */
+        .window {
+            position: absolute;
+            min-width: 400px;
+            min-height: 300px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+            overflow: hidden;
+            resize: both;
+        }
+
+        .window.active {
+            display: block;
+            z-index: 1000;
+        }
+
+        .window-header {
+            background: linear-gradient(135deg, #3052ec 0%, #2f9aff 100%);
+            color: white;
+            padding: 12px 16px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-control {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .close { background: #ff5f57; }
+        .minimize { background: #ffbd2e; }
+        .maximize { background: #28ca42; }
+
+        .window-control:hover {
+            opacity: 0.8;
+        }
+
+        .window-content {
+            padding: 20px;
+            height: calc(100% - 48px);
+            overflow: auto;
+        }
+
+        /* Taskbar */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 2000;
+        }
+
+        .start-button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .start-button:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .taskbar-apps {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .taskbar-app {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .taskbar-app:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .taskbar-app.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .system-tray {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: white;
+            font-size: 12px;
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            padding: 4px 0;
+            min-width: 150px;
+            display: none;
+            z-index: 3000;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .context-menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        /* Calculator Styles */
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            max-width: 300px;
+        }
+
+        .calc-display {
+            grid-column: 1/-1;
+            padding: 12px;
+            font-size: 18px;
+            text-align: right;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .calc-btn {
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #f9f9f9;
+            transition: background 0.2s;
+        }
+
+        .calc-btn:hover {
+            background: #e9e9e9;
+        }
+
+        .calc-equals {
+            grid-row: span 2;
+            background: #4a90e2;
+            color: white;
+        }
+
+        .calc-zero {
+            grid-column: span 2;
+        }
+
+        /* Snake Game Styles */
+        #snake-canvas {
+            border: 2px solid #333;
+            background: #000;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .game-controls {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .game-btn {
+            padding: 8px 16px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .game-btn:hover {
+            background: #357abd;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .desktop-icon {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .icon-image {
+                width: 36px;
+                height: 36px;
+                font-size: 18px;
+            }
+            
+            .window {
+                min-width: 300px;
+                min-height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Desktop -->
+    <div class="desktop" id="desktop">
+        <!-- Desktop Icons -->
+        <div class="desktop-icon" style="top: 20px; left: 20px;" data-app="calculator">
+            <div class="icon-image">🧮</div>
+            <div class="icon-label">Calculator</div>
+        </div>
+
+        <div class="desktop-icon" style="top: 20px; left: 120px;" data-app="notepad">
+            <div class="icon-image">📝</div>
+            <div class="icon-label">Notepad</div>
+        </div>
+
+        <div class="desktop-icon" style="top: 120px; left: 20px;" data-app="snake">
+            <div class="icon-image">🐍</div>
+            <div class="icon-label">Snake Game</div>
+        </div>
+
+        <div class="desktop-icon" style="top: 120px; left: 120px;" data-app="portfolio">
+            <div class="icon-image">👤</div>
+            <div class="icon-label">Portfolio</div>
+        </div>
+
+        <div class="desktop-icon" style="top: 20px; left: 220px;" data-app="browser">
+            <div class="icon-image">🌐</div>
+            <div class="icon-label">Browser</div>
+        </div>
+    </div>
+
+    <!-- Windows -->
+    <!-- Calculator Window -->
+    <div class="window" id="calculator-window">
+        <div class="window-header">
+            <span>Calculator</span>
+            <div class="window-controls">
+                <div class="window-control minimize">−</div>
+                <div class="window-control maximize">□</div>
+                <div class="window-control close">×</div>
+            </div>
+        </div>
+        <div class="window-content">
+            <div class="calc-grid">
+                <input type="text" id="calc-display" class="calc-display" readonly>
+                <button class="calc-btn" onclick="clearCalc()">C</button>
+                <button class="calc-btn" onclick="appendToCalc('/')">/</button>
+                <button class="calc-btn" onclick="appendToCalc('*')">*</button>
+                <button class="calc-btn" onclick="deleteLast()">⌫</button>
+                <button class="calc-btn" onclick="appendToCalc('7')">7</button>
+                <button class="calc-btn" onclick="appendToCalc('8')">8</button>
+                <button class="calc-btn" onclick="appendToCalc('9')">9</button>
+                <button class="calc-btn" onclick="appendToCalc('-')">-</button>
+                <button class="calc-btn" onclick="appendToCalc('4')">4</button>
+                <button class="calc-btn" onclick="appendToCalc('5')">5</button>
+                <button class="calc-btn" onclick="appendToCalc('6')">6</button>
+                <button class="calc-btn" onclick="appendToCalc('+')">+</button>
+                <button class="calc-btn" onclick="appendToCalc('1')">1</button>
+                <button class="calc-btn" onclick="appendToCalc('2')">2</button>
+                <button class="calc-btn" onclick="appendToCalc('3')">3</button>
+                <button class="calc-btn calc-equals" onclick="calculate()">=</button>
+                <button class="calc-btn calc-zero" onclick="appendToCalc('0')">0</button>
+                <button class="calc-btn" onclick="appendToCalc('.')">.</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notepad Window -->
+    <div class="window" id="notepad-window">
+        <div class="window-header">
+            <span>Notepad</span>
+            <div class="window-controls">
+                <div class="window-control minimize">−</div>
+                <div class="window-control maximize">□</div>
+                <div class="window-control close">×</div>
+            </div>
+        </div>
+        <div class="window-content">
+            <textarea id="notepad-text" style="width: 100%; height: 100%; border: 1px solid #ddd; resize: none; font-family: 'Courier New', monospace; padding: 8px; font-size: 14px;" placeholder="Start typing your notes here..."></textarea>
+        </div>
+    </div>
+
+    <!-- Snake Game Window -->
+    <div class="window" id="snake-window">
+        <div class="window-header">
+            <span>Snake Game</span>
+            <div class="window-controls">
+                <div class="window-control minimize">−</div>
+                <div class="window-control maximize">□</div>
+                <div class="window-control close">×</div>
+            </div>
+        </div>
+        <div class="window-content">
+            <canvas id="snake-canvas" width="400" height="300"></canvas>
+            <div class="game-controls">
+                <button class="game-btn" onclick="startSnakeGame()">Start New Game</button>
+                <p style="margin-top: 8px; font-size: 12px; color: #666;">Use arrow keys to control the snake</p>
+                <p id="snake-score" style="margin-top: 4px; font-weight: bold;">Score: 0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Window -->
+    <div class="window" id="portfolio-window">
+        <div class="window-header">
+            <span>My Portfolio</span>
+            <div class="window-controls">
+                <div class="window-control minimize">−</div>
+                <div class="window-control maximize">□</div>
+                <div class="window-control close">×</div>
+            </div>
+        </div>
+        <div class="window-content">
+            <h2 style="color: #333; margin-bottom: 16px;">Welcome to My Portfolio</h2>
+            <p style="margin-bottom: 16px; line-height: 1.6;">This is a desktop-style portfolio showcasing my projects and skills. You can customize this section with your own information.</p>
+            
+            <h3 style="color: #4a90e2; margin-bottom: 8px;">About Me</h3>
+            <p style="margin-bottom: 16px; line-height: 1.6;">I'm a web developer passionate about creating interactive experiences. This desktop interface demonstrates modern web technologies in action.</p>
+            
+            <h3 style="color: #4a90e2; margin-bottom: 8px;">Skills</h3>
+            <p style="margin-bottom: 16px; line-height: 1.6;">HTML5, CSS3, JavaScript, React, Node.js, Git, and more...</p>
+            
+            <h3 style="color: #4a90e2; margin-bottom: 8px;">Projects</h3>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li>Desktop Interface - This interactive web desktop</li>
+                <li>Calculator App - Functional calculator with modern UI</li>
+                <li>Snake Game - Classic game built with Canvas API</li>
+                <li>Portfolio Site - Responsive portfolio website</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Browser Window -->
+    <div class="window" id="browser-window">
+        <div class="window-header">
+            <span>Web Browser</span>
+            <div class="window-controls">
+                <div class="window-control minimize">−</div>
+                <div class="window-control maximize">□</div>
+                <div class="window-control close">×</div>
+            </div>
+        </div>
+        <div class="window-content">
+            <div style="margin-bottom: 16px;">
+                <input type="url" id="browser-url" placeholder="Enter URL..." style="width: 70%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                <button onclick="loadUrl()" style="padding: 8px 16px; margin-left: 8px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer;">Go</button>
+            </div>
+            <iframe id="browser-frame" width="100%" height="400" style="border: 1px solid #ddd;" src="about:blank"></iframe>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="start-button" onclick="showStartMenu()">Start</button>
+        <div class="taskbar-apps" id="taskbar-apps"></div>
+        <div class="system-tray">
+            <span id="current-time"></span>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" onclick="refreshDesktop()">Refresh</div>
+        <div class="context-menu-item" onclick="changeWallpaper()">Change Wallpaper</div>
+        <div class="context-menu-item" onclick="showProperties()">Properties</div>
+        <div class="context-menu-item" onclick="showAbout()">About</div>
+    </div>
+
+    <script>
+        // Global variables
+        let draggedElement = null;
+        let dragOffset = { x: 0, y: 0 };
+        let zIndexCounter = 1000;
+        let openWindows = new Set();
+        let snake, food, direction, gameRunning, score;
+
+        // Initialize desktop when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            setInterval(updateTime, 1000);
+            setupEventListeners();
+            initializeSnakeGame();
+        });
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Desktop icon double-click to open apps
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.addEventListener('dblclick', function() {
+                    openApp(this.dataset.app);
+                });
+                
+                // Single click to select icon
+                icon.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    clearSelection();
+                    this.classList.add('selected');
+                });
+            });
+
+            // Window dragging functionality
+            document.querySelectorAll('.window-header').forEach(header => {
+                header.addEventListener('mousedown', startDrag);
+            });
+
+            // Window close buttons
+            document.querySelectorAll('.close').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    closeWindow(this.closest('.window'));
+                });
+            });
+
+            // Context menu (right-click)
+            document.addEventListener('contextmenu', function(e) {
+                if (e.target.closest('.window') || e.target.closest('.taskbar')) return;
+                e.preventDefault();
+                showContextMenu(e.clientX, e.clientY);
+            });
+
+            // Hide context menu on click
+            document.addEventListener('click', function() {
+                hideContextMenu();
+                clearSelection();
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    hideContextMenu();
+                }
+            });
+        }
+
+        // Open application window
+        function openApp(appName) {
+            const window = document.getElementById(appName + '-window');
+            if (window) {
+                window.classList.add('active');
+                window.style.zIndex = ++zIndexCounter;
+                
+                // Position window if not already positioned
+                if (!window.style.left || !window.style.top) {
+                    const rect = window.getBoundingClientRect();
+                    window.style.left = Math.max(0, (window.offsetParent.clientWidth - rect.width) / 2) + 'px';
+                    window.style.top = Math.max(0, (window.offsetParent.clientHeight - rect.height) / 2) + 'px';
+                }
+                
+                openWindows.add(appName);
+                updateTaskbar();
+            }
+        }
+
+        // Close window
+        function closeWindow(window) {
+            window.classList.remove('active');
+            const appName = window.id.replace('-window', '');
+            openWindows.delete(appName);
+            updateTaskbar();
+        }
+
+        // Update taskbar with open applications
+        function updateTaskbar() {
+            const taskbarApps = document.getElementById('taskbar-apps');
+            taskbarApps.innerHTML = '';
+            
+            openWindows.forEach(appName => {
+                const btn = document.createElement('button');
+                btn.className = 'taskbar-app';
+                btn.textContent = formatAppName(appName);
+                btn.onclick = () => focusWindow(appName);
+                taskbarApps.appendChild(btn);
+            });
+        }
+
+        // Format app name for display
+        function formatAppName(appName) {
+            return appName.charAt(0).toUpperCase() + appName.slice(1).replace(/([A-Z])/g, ' $1');
+        }
+
+        // Focus window (bring to front)
+        function focusWindow(appName) {
+            const window = document.getElementById(appName + '-window');
+            if (window && window.classList.contains('active')) {
+                window.style.zIndex = ++zIndexCounter;
+            }
+        }
+
+        // Window dragging functions
+        function startDrag(e) {
+            draggedElement = e.target.closest('.window');
+            const rect = draggedElement.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            draggedElement.style.zIndex = ++zIndexCounter;
+        }
+
+        function drag(e) {
+            if (draggedElement) {
+                const newX = Math.max(0, Math.min(window.innerWidth - draggedElement.offsetWidth, e.clientX - dragOffset.x));
+                const newY = Math.max(0, Math.min(window.innerHeight - 50 - draggedElement.offsetHeight, e.clientY - dragOffset.y));
+                
+                draggedElement.style.left = newX + 'px';
+                draggedElement.style.top = newY + 'px';
+            }
+        }
+
+        function stopDrag() {
+            draggedElement = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // Update system clock
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateString = now.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            document.getElementById('current-time').innerHTML = `${timeString}<br>${dateString}`;
+        }
+
+        // Context menu functions
+        function showContextMenu(x, y) {
+            const menu = document.getElementById('context-menu');
+            menu.style.left = Math.min(x, window.innerWidth - menu.offsetWidth) + 'px';
+            menu.style.top = Math.min(y, window.innerHeight - menu.offsetHeight) + 'px';
+            menu.style.display = 'block';
+        }
+
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.desktop-icon.selected').forEach(icon => {
+                icon.classList.remove('selected');
+            });
+        }
+
+        // Calculator functions
+        function appendToCalc(value) {
+            const display = document.getElementById('calc-display');
+            if (display.value === 'Error' || display.value === '0') {
+                display.value = value;
+            } else {
+                display.value += value;
+            }
+        }
+
+        function clearCalc() {
+            document.getElementById('calc-display').value = '';
+        }
+
+        function deleteLast() {
+            const display = document.getElementById('calc-display');
+            display.value = display.value.slice(0, -1);
+        }
+
+        function calculate() {
+            const display = document.getElementById('calc-display');
+            try {
+                const result = Function('"use strict"; return (' + display.value + ')')();
+                display.value = result;
+            } catch {
+                display.value = 'Error';
+            }
+        }
+
+        // Snake game functions
+        function initializeSnakeGame() {
+            const canvas = document.getElementById('snake-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Press "Start New Game" to play', canvas.width/2, canvas.height/2);
+        }
+
+        function startSnakeGame() {
+            const canvas = document.getElementById('snake-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Initialize game state
+            snake = [{x: 10, y: 10}];
+            food = generateFood();
+            direction = {x: 0, y: 0};
+            gameRunning = true;
+            score = 0;
+            updateScore();
+            
+            // Add keyboard listener
+            document.addEventListener('keydown', changeDirection);
+            
+            // Start game loop
+            gameLoop();
+        }
+
+        function generateFood() {
+            return {
+                x: Math.floor(Math.random() * 20),
+                y: Math.floor(Math.random() * 15)
+            };
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            const canvas = document.getElementById('snake-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Move snake
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+            
+            // Check wall collisions
+            if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 15) {
+                endGame();
+                return;
+            }
+            
+            // Check self collision
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                endGame();
+                return;
+            }
+            
+            snake.unshift(head);
+            
+            // Check food collision
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                updateScore();
+                food = generateFood();
+                // Make sure food doesn't spawn on snake
+                while (snake.some(segment => segment.x === food.x && segment.y === food.y)) {
+                    food = generateFood();
+                }
+            } else {
+                snake.pop();
+            }
+            
+            // Draw everything
+            drawGame(ctx);
+            
+            // Continue game loop
+            setTimeout(gameLoop, 120);
+        }
+
+        function drawGame(ctx) {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // Draw snake
+            ctx.fillStyle = '#0f0';
+            snake.forEach((segment, index) => {
+                if (index === 0) {
+                    // Head is slightly different color
+                    ctx.fillStyle = '#090';
+                } else {
+                    ctx.fillStyle = '#0f0';
+                }
+                ctx.fillRect(segment.x * 20, segment.y * 20, 18, 18);
+            });
+            
+            // Draw food
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(food.x * 20, food.y * 20, 18, 18);
+        }
+
+        function changeDirection(e) {
+            if (!gameRunning) return;
+            
+            const key = e.key;
+            
+            // Prevent reverse direction
+            switch(key) {
+                case 'ArrowUp':
+                    if (direction.y === 0) direction = {x: 0, y: -1};
+                    break;
+                case 'ArrowDown':
+                    if (direction.y === 0) direction = {x: 0, y: 1};
+                    break;
+                case 'ArrowLeft':
+                    if (direction.x === 0) direction = {x: -1, y: 0};
+                    break;
+                case 'ArrowRight':
+                    if (direction.x === 0) direction = {x: 1, y: 0};
+                    break;
+            }
+        }
+
+        function endGame() {
+            gameRunning = false;
+            const canvas = document.getElementById('snake-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Game Over!', canvas.width/2, canvas.height/2 - 20);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 10);
+        }
+
+        function updateScore() {
+            document.getElementById('snake-score').textContent = `Score: ${score}`;
+        }
+
+        // Browser functions
+        function loadUrl() {
+            const url = document.getElementById('browser-url').value;
+            const frame = document.getElementById('browser-frame');
+            
+            if (url.trim()) {
+                let finalUrl = url;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    finalUrl = 'https://' + url;
+                }
+                frame.src = finalUrl;
+            }
+        }
+
+        // Context menu actions
+        function refreshDesktop() {
+            location.reload();
+        }
+
+        function changeWallpaper() {
+            const wallpapers = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+            ];
+            const randomWallpaper = wallpapers[Math.floor(Math.random() * wallpapers.length)];
+            document.body.style.background = randomWallpaper;
+        }
+
+        function showProperties() {
+            alert('Desktop Properties\n\nResolution: ' + window.innerWidth + 'x' + window.innerHeight + '\nBrowser: ' + navigator.userAgent.split(' ')[0]);
+        }
+
+        function showAbout() {
+            alert('Web Desktop Interface v1.0\n\nCreated with HTML5, CSS3, and JavaScript\nFeatures:\n• Draggable windows\n• Working applications\n• Interactive games\n• Responsive design');
+        }
+
+        function showStartMenu() {
+            // You can expand this to create a proper start menu
+            alert('Start Menu\n\nQuick Actions:\n• Open Calculator\n• Open Notepad\n• Open Snake Game\n• Open Portfolio\n• Open Browser\n\nDouble-click desktop icons to launch applications!');
+        }
+
+        // Utility functions
+        function addNewIcon(name, emoji, appId, x, y) {
+            const desktop = document.getElementById('desktop');
+            const icon = document.createElement('div');
+            icon.className = 'desktop-icon';
+            icon.style.top = y + 'px';
+            icon.style.left = x + 'px';
+            icon.dataset.app = appId;
+            
+            icon.innerHTML = `
+                <div class="icon-image">${emoji}</div>
+                <div class="icon-label">${name}</div>
+            `;
+            
+            // Add event listeners
+            icon.addEventListener('dblclick', function() {
+                openApp(this.dataset.app);
+            });
+            
+            icon.addEventListener('click', function(e) {
+                e.stopPropagation();
+                clearSelection();
+                this.classList.add('selected');
+            });
+            
+            desktop.appendChild(icon);
+        }
+
+        // Example of how to add a new app programmatically
+        // addNewIcon('Music Player', '🎵', 'music', 320, 20);
+
+        // Save and restore window positions (you can expand this)
+        function saveWindowState() {
+            const windows = {};
+            document.querySelectorAll('.window').forEach(win => {
+                if (win.classList.contains('active')) {
+                    windows[win.id] = {
+                        left: win.style.left,
+                        top: win.style.top,
+                        zIndex: win.style.zIndex
+                    };
+                }
+            });
+            // In a real app, you'd save this to localStorage
+            // localStorage.setItem('windowState', JSON.stringify(windows));
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Alt + Tab to cycle through windows (basic implementation)
+            if (e.altKey && e.key === 'Tab') {
+                e.preventDefault();
+                cycleWindows();
+            }
+            
+            // Ctrl + Alt + T to open browser (like terminal shortcut)
+            if (e.ctrlKey && e.altKey && e.key === 't') {
+                e.preventDefault();
+                openApp('browser');
+            }
+        });
+
+        function cycleWindows() {
+            const openWindowsArray = Array.from(openWindows);
+            if (openWindowsArray.length > 1) {
+                const currentHighest = Math.max(...Array.from(document.querySelectorAll('.window.active')).map(w => parseInt(w.style.zIndex) || 0));
+                const currentWindow = document.querySelector(`.window.active[style*="z-index: ${currentHighest}"]`);
+                
+                if (currentWindow) {
+                    const currentIndex = openWindowsArray.indexOf(currentWindow.id.replace('-window', ''));
+                    const nextIndex = (currentIndex + 1) % openWindowsArray.length;
+                    focusWindow(openWindowsArray[nextIndex]);
+                }
+            }
+        }
+
+        // Auto-save notepad content
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'notepad-text') {
+                // In a real app, you might want to save to localStorage
+                // localStorage.setItem('notepad-content', e.target.value);
+            }
+        });
+
+        // Load saved content on startup
+        window.addEventListener('load', function() {
+            // Example of loading saved notepad content
+            // const savedContent = localStorage.getItem('notepad-content');
+            // if (savedContent) {
+            //     document.getElementById('notepad-text').value = savedContent;
+            // }
+        });
+    </script>
+</body>
+</html>
